@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+    auth_dev:
+        container_name: bigleap_auth
+        image: bigleap_auth:1.0.0
+        build:
+            context: ./auth
+            target: development
+            dockerfile: .
+        command: npm run start:debug
+        ports:
+            - 8080:8080
+            - 9234:9229
+        networks:
+            - nesjs-network
+        depends_on:
+            - mongodb
+            - db_dev
+            - email_dev
+        environment: 
+            DATABASE_SERVICE : db_dev
+            EMAIL_SERVICE: email_dev
+        volumes:
+            - .:/usr/src/app
+            - /usr/src/app/node_modules
+        restart: unless-stopped
+    email_dev:
+        container_name: bigleap_email
+        image: bigleap_email:1.0.0
+        build:
+            context: ./email
+            target: development
+            dockerfile: .
+        command: npm run start:debug
+        ports:
+            - 8889:8889
+            - 9230:9230
+        networks:
+            - nesjs-network
+        environment:
+            USER: ${SUPPORT_EMAIL}
+            PASSWORD: ${SUPPORT_PASSWORD}
+        volumes:
+            - .:/usr/src/app
+            - /usr/src/app/node_modules
+        restart: unless-stopped
+    db_dev:
+        container_name: bigleap_db
+        image: bigleap_db:1.0.0
+        build:
+            context: ./db
+            target: development
+            dockerfile: .
+        command: npm run start:debug
+        ports:
+            - 8888:8888
+            - 9235:9229
+        networks:
+            - nesjs-network
+        depends_on:
+            - mongodb
+        environment: 
+            DATABASE_URL : mongodb://mongodb:27017/test
+        volumes:
+            - .:/usr/src/app
+            - /usr/src/app/node_modules
+        restart: unless-stopped
+    mongodb:
+        image : mongo:latest
+        container_name: mongodb
+        volumes:
+            - ./database:/data/db
+        ports:
+            - 27020:27017
+        networks:
+            - nesjs-network
+        restart: always
+networks:
+    nesjs-network:

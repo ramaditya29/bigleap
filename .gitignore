@@ -1,0 +1,5 @@
+database/
+node_modules/
+./db/node_modules/
+./auth/node_modules/
+./email/node_modules
