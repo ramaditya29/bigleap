@@ -63,7 +63,7 @@ export class AuthController {
       response.status(HttpStatus.BAD_REQUEST).json({ status: "ERROR", message: "OTP GENERATION FAILURE", data: ""});
     }
   
-  }
+  }   
 
   @Post('/validateOtp')
   async validateOtp(@Body() otpDetails: ValidateOtp){
