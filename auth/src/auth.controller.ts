@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Logger, NotFoundException, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Logger, NotFoundException, Post, Res, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
@@ -7,7 +7,14 @@ import { LoginDto } from './dto/LoginDto.dto';
 import { RegisterDto } from './dto/RegisterDto.dto';
 import { ValidateOtp } from './dto/ValidateOtp.dto';
 import { generateOtp } from './utils/utils';
-
+import { ResponsePayload } from './utils/ResponsePayload';
+import { Response } from 'express';
+import { ApiOkResponse, ApiResponse, ApiHeader, ApiTags } from '@nestjs/swagger';
+@ApiTags('auth')
+@ApiHeader({
+  name: 'Authorization',
+  description: 'Bearer <Token>',
+})
 @Controller('/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService,
@@ -35,12 +42,14 @@ export class AuthController {
   }
 
   @Post('/login')
+  @ApiOkResponse({ status: 200, description: "OTP Validation", type: ResponsePayload})
   async login(@Body() loginDto: LoginDto){
     return await this.dbService.send({cmd: 'login_user'}, loginDto.email);
   }
 
   @Post('/getOtp')
-  async getOtp(@Body() otpDetails: GetOtpDto){
+  @ApiOkResponse({ status: 200, description: "OTP Validation", type: ResponsePayload})
+  async getOtp(@Body() otpDetails: GetOtpDto, @Res() response: Response){
     const serviceResponse$ = this.dbService.send({cmd: 'get_otp'} , otpDetails);
     let res = await lastValueFrom(serviceResponse$);
     
@@ -49,18 +58,11 @@ export class AuthController {
       Logger.log(data.currentOtp);
       const emailStatus = this.emailService.send({cmd : 'send_email'}, {email: data.email, message: `OTP is:${data.currentOtp}`, subject: 'OTP for Bigleap' });
       let st = await lastValueFrom(emailStatus);
-      //Logger.log(JSON.stringify(email), 'test is:');
-      //.sendEmail(data.email, 'OTP', `OTP:${data.currentOtp}` );
-      return { status: "SUCCESS", message: "OTP GENERATION SUCCESS", data: ""}
+      response.status(HttpStatus.OK).json({ status: "SUCCESS", message: "OTP GENERATION SUCCESS", data: ""});
     } else {
-      return { status: "ERROR", message: "OTP GENERATION FAILURE", data: ""}
+      response.status(HttpStatus.BAD_REQUEST).json({ status: "ERROR", message: "OTP GENERATION FAILURE", data: ""});
     }
-    /*const data = this.authService.sendEmail(otpDetails.email, '');
-    if(data){
-      return data;
-    } else {
-      return new NotFoundException('Error');
-    }*/
+  
   }
 
   @Post('/validateOtp')
